@@ -1,6 +1,7 @@
 requests
 python-dotenv
 flask
+gunicorn
 apscheduler
 # calibration / ML (step 6)
 numpy

@@ -1,0 +1,41 @@
+{% macro chip(grade, big=False) -%}
+<span class="chip g-{{ grade }}{{ ' big-chip' if big }}" title="Exit grade {{ grade }}"><span class="sr-only">Exit grade </span>{{ grade }}</span>
+{%- endmacro %}
+
+{% macro maxpos_band(r) -%}
+{% if r.extrapolated %}above the {{ r | maxpos | replace('> ', '') }} we can measure
+{% elif r.max_pos_lo %}50% band {{ r.max_pos_lo | usd }} – {{ r.max_pos_hi | usd }}{% endif %}
+{%- endmacro %}
+
+{% macro token_link(r) -%}
+<a href="{{ url_for('token', slug=r.slug) }}"><strong>{{ r.symbol }}</strong></a> <span class="muted small hide-sm">{{ r.name }}</span>
+{%- endmacro %}
+
+{# a labelled figure card #}
+{% macro stat(label, value, sub=None, small=False) -%}
+<div class="stat">
+  <span class="label">{{ label }}</span>
+  <span class="value{{ ' sm' if small }}">{{ value }}</span>
+  {% if sub %}<span class="sub">{{ sub }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{# search + grade toggles above an enhanced table #}
+{% macro table_tools(table_id, placeholder, noun, counts=None, grades=None) -%}
+<div class="table-tools" data-tools-for="{{ table_id }}">
+  <span class="filter">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input type="search" placeholder="{{ placeholder }}" aria-label="{{ placeholder }}" autocomplete="off">
+  </span>
+  {% if counts and grades %}
+  <span class="filters">
+    {% for g in grades %}{% if counts.get(g) %}
+    <button type="button" class="gfilter" data-grade="{{ g }}" aria-pressed="true">
+      <span class="swatch" style="background:var(--g-{{ g }})"></span>{{ g }} <span class="n">{{ counts[g] }}</span>
+    </button>
+    {% endif %}{% endfor %}
+  </span>
+  {% endif %}
+  <span class="count" data-noun="{{ noun }}"></span>
+</div>
+{%- endmacro %}

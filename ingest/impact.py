@@ -151,6 +151,29 @@ def cost_curve(volume_24h, sigma_daily, Y=Y_DEFAULT, sizes=None, points=25, delt
 
 
 # ---------------------------------------------------------------------------
+# Confidence bands -- from the out-of-fold errors calibrate.py measured
+# ---------------------------------------------------------------------------
+# r = log(observed / predicted). Its 25th-75th percentiles give a 50% band.
+_RQ = (CALIBRATION or {}).get("residual_quantiles", {})
+BAND_LO, BAND_HI = _RQ.get("0.25"), _RQ.get("0.75")
+
+
+def band_bps(bps):
+    """50% band on a predicted cost: [bps * e^q25, bps * e^q75]."""
+    if bps is None or BAND_LO is None:
+        return None
+    return bps * math.exp(BAND_LO), bps * math.exp(BAND_HI)
+
+
+def band_max_position(q, delta=DELTA):
+    """50% band on max position. If the true cost is model * e^r, the size that
+    really costs `tolerance` is q * e^(-r / delta) -- so the band flips and widens."""
+    if q is None or BAND_LO is None:
+        return None
+    return q * math.exp(-BAND_HI / delta), q * math.exp(-BAND_LO / delta)
+
+
+# ---------------------------------------------------------------------------
 # Inputs
 # ---------------------------------------------------------------------------
 

@@ -138,3 +138,13 @@ def test_max_position_beyond_calibration_is_flagged():
     assert rate(5e10, 0.02, 1.0, delta=0.5)["max_position_extrapolated"] is True
     assert rate(1e6, 0.08, 1.0, delta=0.5)["max_position_extrapolated"] is False
     assert rate(0, 0.08, 1.0)["max_position_extrapolated"] is False
+
+
+def test_max_position_band_brackets_the_estimate():
+    from ingest.impact import band_max_position, band_bps, BAND_LO
+    if BAND_LO is None:
+        pytest.skip("no calibration.json yet")
+    lo, hi = band_max_position(1_000_000, delta=0.65)
+    assert lo < 1_000_000 < hi
+    blo, bhi = band_bps(100)
+    assert blo < 100 < bhi

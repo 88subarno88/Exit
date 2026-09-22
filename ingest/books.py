@@ -5,7 +5,7 @@ made up" is an unanswerable criticism. With it, you have a published error table
 
 All of these are FREE and need NO API KEY:
   Binance  https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints
-  Kraken   https://docs.kraken.com/rest/#tag/Market-Data/operation/getOrderBook
+  Kraken   https://docs.kraken.com/api/docs/rest-api/get-order-book
   Coinbase https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductbook
   OKX      https://www.okx.com/docs-v5/en/#order-book-trading-market-data
 

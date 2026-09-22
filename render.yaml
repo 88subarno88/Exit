@@ -1,0 +1,14 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# The site only reads web/site.db (written by scripts/export_site.py) -- no API key.
+services:
+  - type: web
+    name: exit
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: gunicorn web.app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: SITE_DB
+        value: web/site.db
+      - key: PYTHON_VERSION
+        value: 3.12.3

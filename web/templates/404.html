@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block title %}Not found{% endblock %}
+{% block wrapmod %}reading{% endblock %}
+{% block body %}
+<div class="empty">
+  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+  <h1>We don't rate that token</h1>
+  <p>Exit rates the 500 largest tokens on CoinMarketCap. Search for it by symbol or name, or browse the full table.</p>
+  <div class="actions">
+    <a class="btn primary" href="{{ url_for('ratings') }}">Browse all ratings</a>
+    <a class="btn" href="{{ url_for('map_view') }}">Back to the map</a>
+  </div>
+</div>
+{% endblock %}

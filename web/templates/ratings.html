@@ -1,0 +1,156 @@
+{% extends "base.html" %}{% from "_macros.html" import chip, token_link %}
+{% block title %}Ratings{% endblock %}
+
+{% macro grade_rail(counts, grades) -%}
+{% set mx = (counts.values() | max) or 1 %}
+<div class="rail-card">
+  <h4 class="rail-title">Filter by grade <button type="button" class="rail-reset" data-filter-reset>Show all</button></h4>
+  <div class="gbars">
+    {% for g in grades %}{% if counts[g] %}
+    <button type="button" class="gbar gfilter" data-grade="{{ g }}" aria-pressed="true"
+            title="Show only {{ g }}">
+      <span class="chip g-{{ g }}">{{ g }}</span>
+      <span class="track"><span class="fill" style="width:{{ (100 * counts[g] / mx) | round(1) }}%;background:var(--g-{{ g }})"></span></span>
+      <span class="n">{{ counts[g] }}</span>
+    </button>
+    {% endif %}{% endfor %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro coverage_rail(summary) -%}
+<div class="rail-card">
+  <h4 class="rail-title">Coverage</h4>
+  <dl class="rail-stats">
+    <div><dt>Tokens rated</dt><dd>{{ summary.total }}</dd></div>
+    <div><dt>Investment grade</dt><dd>{{ summary.investment }}<span class="of">{{ (100 * summary.investment / summary.total) | round | int }}%</span></dd></div>
+    <div><dt>Speculative</dt><dd>{{ summary.speculative }}<span class="of">{{ (100 * summary.speculative / summary.total) | round | int }}%</span></dd></div>
+    <div><dt>Not rated</dt><dd>{{ summary.nr }}</dd></div>
+  </dl>
+  <p class="small muted" style="margin:14px 0 0">Investment grade is BBB or better: at least {{ 300000 | usd }} can leave at once for under 2%.</p>
+</div>
+{%- endmacro %}
+
+{% macro search_row(placeholder) -%}
+<div class="table-tools">
+  <span class="filter">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input type="search" placeholder="{{ placeholder }}" aria-label="{{ placeholder }}" autocomplete="off">
+  </span>
+  <span class="count" data-noun="tokens"></span>
+</div>
+{%- endmacro %}
+
+{% block body %}
+<header class="page-head">
+  <div>
+    <h1>Ratings</h1>
+    <p class="lede">Every token we rate, graded by how much you could sell at once for under 2%. Recomputed daily from CoinMarketCap data and the calibrated curve.</p>
+  </div>
+  <nav class="tabs" aria-label="Ratings views">
+    <a href="?tab=grades" class="{{ 'on' if tab == 'grades' }}">By market cap</a>
+    <a href="?tab=liquidity" class="{{ 'on' if tab == 'liquidity' }}">Liquidity rank</a>
+    <a href="?tab=feed" class="{{ 'on' if tab == 'feed' }}">Grade changes</a>
+  </nav>
+</header>
+
+{% if tab == 'liquidity' %}
+<div class="workspace" data-tools-for="t-liquidity">
+  <aside class="rail">
+    {{ grade_rail(counts, grades) }}
+    <div class="rail-card">
+      <h4 class="rail-title">Reading the move</h4>
+      <p class="small muted" style="margin:0">Ranked by max position instead of market cap. <span class="arrow-up">▲</span> means a token ranks higher by liquidity than by size, <span class="arrow-down">▼</span> lower. Tokens above {{ 10000000 | usd }} rank by the model's estimate, which isn't printed because it is beyond anything we have measured.</p>
+    </div>
+  </aside>
+  <section>
+    {{ search_row('Filter by symbol or name…') }}
+    <div class="table-scroll flow"><table id="t-liquidity" data-enhance>
+      <thead><tr>
+        <th class="num" data-sort>Rank</th><th class="num">Move</th><th data-sort>Grade</th>
+        <th class="grow" data-sort>Token</th><th class="num" data-sort>Max position</th><th class="num" data-sort>Market cap</th>
+      </tr></thead>
+      <tbody>
+      {% for rank, move, r in liquidity %}
+      <tr data-grade="{{ r.grade }}" data-search="{{ r.symbol }} {{ r.name }}">
+          <td class="num faint" data-v="{{ rank }}">{{ rank }}</td>
+          <td class="num" data-v="{{ move }}">{% if move > 0 %}<span class="arrow-up">▲ {{ move }}</span>{% elif move < 0 %}<span class="arrow-down">▼ {{ -move }}</span>{% else %}<span class="faint">–</span>{% endif %}</td>
+          <td data-v="{{ r.max_position or 0 }}">{{ chip(r.grade) }}</td>
+          <td class="grow">{{ token_link(r) }}</td>
+          <td class="num" data-v="{{ r.max_position or 0 }}">{{ r | maxpos }}</td>
+          <td class="num" data-v="{{ r.market_cap or 0 }}">{{ r.market_cap | usd }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="caveat">Grades follow one published scale. <a href="{{ url_for('methodology') }}#grades">See the thresholds</a>. Every figure is a model estimate with a 50% band of roughly ×2 either way.</p>
+  </section>
+</div>
+
+{% elif tab == 'feed' %}
+<div class="workspace" data-tools-for="t-feed">
+  <aside class="rail">
+    <div class="rail-card">
+      <h4 class="rail-title">Runs so far</h4>
+      <div class="rail-runs">
+        {% for r in runs %}<div><span>{{ r.ts[:16].replace('T', ' ') }}</span><span>{{ r.n }}</span></div>{% endfor %}
+      </div>
+    </div>
+    <div class="rail-card">
+      <h4 class="rail-title">What counts as a change</h4>
+      <p class="small muted" style="margin:0">Each daily run is compared with the one before it. A change means the token's max position crossed one of the published grade thresholds.</p>
+    </div>
+  </aside>
+  <section>
+    {% if feed %}
+    {{ search_row('Filter by symbol…') }}
+    <div class="table-scroll flow"><table id="t-feed" data-enhance>
+      <thead><tr><th data-sort>When (UTC)</th><th data-sort>Token</th><th>Change</th><th class="num" data-sort>Max position now</th></tr></thead>
+      <tbody>
+      {% for f in feed %}
+      <tr data-search="{{ f.symbol }}">
+          <td class="muted">{{ f.ts[:16].replace('T', ' ') }}</td>
+          <td><a href="{{ url_for('token', slug=f.slug) }}"><strong>{{ f.symbol }}</strong></a></td>
+          <td>{{ chip(f.old) }} <span class="faint">→</span> {{ chip(f.new) }}</td>
+          <td class="num" data-v="{{ f.max_position or 0 }}">{{ f.max_position | usd }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <div class="callout measure">No grade has changed yet. The feed compares each daily run with the one before it, and the runs so far all gave the same grades.</div>
+    {% endif %}
+    <p class="caveat">Grades follow one published scale. <a href="{{ url_for('methodology') }}#grades">See the thresholds</a>.</p>
+  </section>
+</div>
+
+{% else %}
+<div class="workspace" data-tools-for="t-grades">
+  <aside class="rail">
+    {{ coverage_rail(summary) }}
+    {{ grade_rail(counts, grades) }}
+  </aside>
+  <section>
+    {{ search_row('Filter by symbol or name…') }}
+    <div class="table-scroll flow"><table id="t-grades" data-enhance>
+      <thead><tr>
+        <th class="num">#</th><th data-sort>Grade</th><th class="grow" data-sort>Token</th>
+        <th class="num" data-sort>Max position</th><th class="num" data-sort>$100k sale costs</th>
+        <th class="num" data-sort>Market cap</th><th class="num" data-sort>24h volume</th>
+      </tr></thead>
+      <tbody>
+      {% for r in rows %}
+      <tr data-grade="{{ r.grade }}" data-search="{{ r.symbol }} {{ r.name }}">
+          <td class="num faint">{{ loop.index }}</td>
+          <td data-v="{{ r.max_position or 0 }}">{{ chip(r.grade) }}</td>
+          <td class="grow">{{ token_link(r) }}</td>
+          <td class="num" data-v="{{ r.max_position or 0 }}">{{ r | maxpos }}</td>
+          <td class="num" data-v="{{ r.exit_100k_bps or 0 }}">{{ r.exit_100k_bps | bps }}</td>
+          <td class="num" data-v="{{ r.market_cap or 0 }}">{{ r.market_cap | usd }}</td>
+          <td class="num" data-v="{{ r.volume_24h or 0 }}">{{ r.volume_24h | usd }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="caveat">Grades follow one published scale. <a href="{{ url_for('methodology') }}#grades">See the thresholds</a>. Every figure is a model estimate with a 50% band of roughly ×2 either way.</p>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

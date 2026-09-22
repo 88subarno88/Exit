@@ -1,0 +1,100 @@
+{% extends "base.html" %}{% from "_macros.html" import chip %}
+{% block title %}Hindsight{% endblock %}
+{% block wrapmod %}mid{% endblock %}
+{% block body %}
+{% set warned = cases | selectattr('warned') | list %}
+<h1>{% if warned | length == 0 %}Liquidity gave no warning before any of these {{ cases | length }} collapses.
+{% elif warned | length == cases | length %}Liquidity warned before all {{ cases | length }} collapses.
+{% else %}Liquidity warned before {{ warned | length }} of {{ cases | length }} collapses, and missed the rest.{% endif %}</h1>
+<p class="lede">We ran today's model backwards, day by day, through {{ cases | length }} famous collapses, using only the data available on each day: the previous day's volume and 30 days of volatility. A “warning” means the grade fell below BBB within 90 days before the collapse.</p>
+
+{% for c in cases %}
+<section class="case">
+  <div class="case-head">
+    <h2>{{ c.label }}</h2>
+    <span class="date">{{ c.date }}</span>
+    {% if c.warned %}
+    <span class="verdict warned">Warned {{ ((c.date | todate) - (c.warned | todate)).days }} days ahead</span>
+    {% else %}
+    <span class="verdict missed">No warning</span>
+    {% endif %}
+  </div>
+  <p class="muted measure" style="margin:10px 0 16px">{{ c.context }}
+    {% if c.warned %}<strong>The grade fell below BBB on {{ c.warned }}.</strong>
+    {% else %}<strong>The grade stayed at BBB or better right up to the collapse.</strong>{% endif %}</p>
+
+  <div class="timeline">
+    {% for off, p in c.points %}
+    <div class="cell{{ ' event' if off == 0 }}">
+      <span class="when">{{ 'Collapse' if off == 0 else ('%+d days' | format(off)) }}</span>
+      <span>{{ chip(p.grade) }}</span>
+      <span class="line">max {{ p.max_position | usd }}</span>
+      <span class="line">price {{ p.close | price }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <div class="chart short"><canvas id="h-{{ c.key }}" aria-label="{{ c.label }}: price and max position around the collapse"></canvas></div>
+  </div>
+</section>
+{% endfor %}
+
+<h2>What this shows</h2>
+<p class="measure">These were solvency and peg failures, not slow drains of liquidity. Right up to the end, trading volume looked healthy, so a model built on volume and volatility rated them highly. The grades collapsed <em>after</em> the event. That's when the exit really did vanish, and the model measured it within days. The honest conclusion: <strong>Exit measures how costly leaving is. It is not a crash predictor.</strong></p>
+
+<p class="caveat">Volume and volatility are real CoinMarketCap history. Which exchanges the tokens traded on in 2022–23 is unknown, and the curve (Y = {{ '%.2f' | format(hcal.Y or 0) }}, δ = {{ '%.3f' | format(hcal.delta or 0) }}) was calibrated on 2026 order books and assumed to hold back then. <a href="{{ url_for('methodology') }}">Methodology</a></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+EXIT.chart(function () {
+  const cases = {{ cases | tojson }};
+  const model = EXIT.css("--model"), ink = EXIT.css("--muted"), red = EXIT.css("--g-D"), faint = EXIT.css("--faint");
+  const made = [];
+
+  for (const c of cases) {
+    const canvas = document.getElementById("h-" + c.key);
+    if (!canvas) continue;
+
+    const eventLine = { id: "event", afterDatasetsDraw(ch) {
+      const i = c.series.findIndex(s => s.day >= c.date);
+      if (i < 0) return;
+      const x = ch.scales.x.getPixelForValue(i);
+      const { top, bottom } = ch.chartArea, ctx = ch.ctx;
+      ctx.save();
+      ctx.strokeStyle = red; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = red; ctx.font = "600 10px " + Chart.defaults.font.family;
+      const nearRight = x > ch.chartArea.right - 60;
+      ctx.textAlign = nearRight ? "right" : "left";
+      ctx.fillText("collapse", nearRight ? x - 5 : x + 5, top + 11);
+      ctx.restore();
+    }};
+
+    made.push(new Chart(canvas, {
+      type: "line",
+      data: { labels: c.series.map(s => s.day), datasets: [
+        { label: "Max position (left)", data: c.series.map(s => s.max_position), borderColor: model, borderWidth: 2, pointRadius: 0, pointStyle: "line", yAxisID: "y" },
+        { label: "Price (right)", data: c.series.map(s => s.close), borderColor: ink, borderWidth: 1.5, pointRadius: 0, pointStyle: "line", borderDash: [3, 3], yAxisID: "p" },
+      ]},
+      options: {
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 4, right: 4 } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 7, color: faint } },
+          y: { type: "logarithmic", position: "left", title: { display: true, text: "Max position", color: faint },
+               ticks: { callback: v => [1e4,1e5,1e6,1e7,1e8,1e9].includes(v) ? EXIT.usd(v) : "" } },
+          p: { type: "logarithmic", position: "right", grid: { drawOnChartArea: false },
+               title: { display: true, text: "Price", color: faint },
+               ticks: { callback: v => Number.isInteger(Math.log10(v)) ? EXIT.usd(v) : "" } },
+        },
+        plugins: { tooltip: { callbacks: { label: t => t.dataset.label.split(" (")[0] + ": " + EXIT.usd(t.raw) } } },
+      },
+      plugins: [eventLine],
+    }));
+  }
+  return made;
+});
+</script>
+{% endblock %}

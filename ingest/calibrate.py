@@ -291,7 +291,16 @@ def report(rows, censored, stats):
                  f"{LEARNED_MARGIN:.0%}, so the power law ships. Published as a negative result.")
     text = "\n".join(L)
 
+    resid = y - oof[winner]                     # log(observed / predicted), out-of-fold
     cal = {"model": winner, "delta": full[winner]["delta"],
+           "residual_quantiles": {str(q): float(np.quantile(resid, q))
+                                  for q in (0.1, 0.25, 0.5, 0.75, 0.9)},
+           "by_size": {str(s): m for s, m in by_size.items()},
+           "feature_importance": {n: float(v) for n, v in imp},
+           "censored": len(censored), "dropped": stats,
+           "fits": {k: {"Y": math.exp(f["logY"]) if "logY" in f else None,
+                        "delta": f["delta"]} for k, f in full.items()},
+           "learned_margin": LEARNED_MARGIN,
            "Y": math.exp(full[winner]["logY"]) if "logY" in full[winner]
            else math.exp(full["power"]["logY"]),
            "target": "immediate sale across binance/okx/coinbase/kraken vs consolidated mid",

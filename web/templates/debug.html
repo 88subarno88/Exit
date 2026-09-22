@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% from "_macros.html" import stat, table_tools %}
+{% block title %}Data log{% endblock %}
+{% block body %}
+<h1>Data log</h1>
+<p class="lede">Every CoinMarketCap API call the pipeline makes is logged here: endpoint, status, latency, credits. Cache hits are marked; they cost nothing.</p>
+
+<h2>Data freshness</h2>
+<div class="grid">
+  {% for k, v in fresh.items() %}
+  {{ stat(k, v[:16].replace('T', ' ') if v else '—', small=True) }}
+  {% endfor %}
+</div>
+
+<h2>By endpoint</h2>
+<div class="table-scroll"><table>
+  <thead><tr><th>Endpoint</th><th class="num">Calls</th><th class="num">Credits</th><th class="num">Avg latency</th><th class="num">Cache hits</th></tr></thead>
+  <tbody>
+  {% for t in totals %}
+  <tr><td><code>{{ t.endpoint }}</code></td><td class="num">{{ t.n }}</td><td class="num">{{ t.credits or 0 }}</td>
+      <td class="num">{{ t.ms | int }} ms</td><td class="num">{{ t.hits or 0 }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+<h2>Last 50 calls</h2>
+{% if calls %}
+{{ table_tools('t-calls', 'Filter by endpoint…', 'calls') }}
+<div class="table-scroll tall"><table id="t-calls" data-enhance>
+  <thead><tr><th data-sort>When (UTC)</th><th data-sort>Endpoint</th><th class="num" data-sort>Status</th><th class="num" data-sort>Latency</th><th class="num" data-sort>Credits</th><th>Cache</th></tr></thead>
+  <tbody>
+  {% for c in calls %}
+  <tr data-search="{{ c.endpoint }} {{ c.status }}">
+      <td class="muted">{{ c.ts[:19].replace('T', ' ') }}</td>
+      <td><code>{{ c.endpoint }}</code></td>
+      <td class="num" data-v="{{ c.status }}">{{ c.status }}</td>
+      <td class="num" data-v="{{ c.latency_ms }}">{{ c.latency_ms }} ms</td>
+      <td class="num" data-v="{{ c.credits }}">{{ c.credits }}</td>
+      <td>{% if c.cache_hit %}<span class="pill">hit</span>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="callout measure">No API calls logged yet. The daily pipeline writes one row per call.</div>
+{% endif %}
+{% endblock %}

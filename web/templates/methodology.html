@@ -1,0 +1,93 @@
+{% extends "base.html" %}{% from "_macros.html" import chip %}
+{% block title %}Methodology{% endblock %}
+{% block wrapmod %}reading{% endblock %}
+{% block body %}
+{% set cv = cal.cv or {} %}
+<h1>Methodology</h1>
+<p class="lede">One curve, fitted to real order books, read four ways. Here is how it's built, how wrong it is, and where it breaks.</p>
+
+<h2>The curve</h2>
+<pre><code>cost (bps) = 10,000 × Y × σ × (Q / V) ^ δ</code></pre>
+<p class="measure"><strong>Q</strong> is the sale size in USD. <strong>V</strong> is yesterday's 24h volume and <strong>σ</strong> the 30-day daily volatility, both from CoinMarketCap. <strong>Y</strong> and <strong>δ</strong> are fitted. It starts from the square-root law of market impact (Almgren, Thum, Hauptmann &amp; Li, 2005), where δ = 0.5. That law describes orders worked over a day while the book refills. Exit measures something harsher: <strong>selling everything immediately</strong>. So δ is fitted too, and the data puts it at <strong>{{ '%.3f' | format(cal.delta) }}</strong>.</p>
+<p class="measure">Every number on the site comes from this one curve:</p>
+<ul class="measure">
+  <li><strong>Exit cost:</strong> the curve at your size.</li>
+  <li><strong>Max position:</strong> the curve solved for the size that costs {{ tol / 100 }}%.</li>
+  <li><strong>Grade:</strong> max position against the scale below.</li>
+  <li><strong>Manipulation cost:</strong> the size that moves the <em>marginal</em> price 10%, which is (1 + δ) × the average cost.</li>
+</ul>
+
+<h2>Ground truth</h2>
+<p class="measure">Every day we download the full public order books from Binance, OKX, Coinbase and Kraken for every token we rate. For each token we merge the bids from all four exchanges and walk them, as if routing one sale across all four at once, at $10k, $100k, $1M and $10M. Cost is measured against the combined mid price, so it includes the spread. Each day's inputs come from the <em>previous</em> day, so the model never sees the day it's tested on.</p>
+{% if cal.fitted_on %}
+<div class="callout measure">Fitted on <strong>{{ cal.fitted_on.rows }}</strong> measured sales across <strong>{{ cal.fitted_on.tokens }}</strong> tokens and {{ cal.fitted_on.days | length }} day{{ 's' if cal.fitted_on.days | length != 1 }} ({{ cal.fitted_on.days[0] }} to {{ cal.fitted_on.days[-1] }}). Another {{ cal.censored }} sales couldn't be absorbed by the merged books at all and are scored separately below. {{ cal.dropped.dropped_truncated }} were dropped because an exchange capped its book, so we can't tell a thin market from a cut-off one.</div>
+{% endif %}
+
+<h2 id="error">How wrong it is</h2>
+<p class="measure">Every model is scored on tokens it never saw: 5-fold cross-validation <strong>grouped by token</strong>. The baseline is the textbook square-root law. A learned model only ships if it cuts the median error by {{ ((cal.learned_margin or 0.05) * 100) | round | int }}%, a rule set before any results were in.</p>
+<div class="table-scroll"><table>
+  <thead><tr><th>Model</th><th class="num">Y</th><th class="num">δ</th><th class="num">Median error</th><th class="num">Typical factor off</th><th class="num">R² (log)</th><th class="num">False comfort</th></tr></thead>
+  <tbody>
+  {% for key, label in [('sqrt', 'Textbook √ law, one Y'), ('power', 'Power law, one Y'), ('learned', 'Learned Y per token')] %}
+  {% set m = cv[key] %}{% set f = (cal.fits or {}).get(key, {}) %}
+  <tr><td>{{ label }}{% if key == cal.model %} <span class="pill">shipped</span>{% endif %}</td>
+      <td class="num">{{ '%.2f' | format(f.Y) if f.Y else 'per token' }}</td><td class="num">{{ '%.3f' | format(f.delta) if f.delta else '—' }}</td>
+      <td class="num">{{ '%.1f' | format(m.mdae_bps) }} bps</td><td class="num">×{{ '%.2f' | format(m.median_factor) }}</td>
+      <td class="num">{{ '%.2f' | format(m.r2_log) }}</td><td class="num">{{ '%.0f' | format(100 * m.false_comfort) if m.false_comfort is not none else '—' }}%</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p class="small muted measure" style="margin-top:12px"><strong>False comfort</strong> is the share of sales the merged books couldn't absorb at all that the model still priced under 10%. This is where the model is most wrong, and we'd rather show it than hide it.</p>
+
+{% if cal.by_size %}
+<h3>Median error by sale size (bps, out of sample)</h3>
+<div class="table-scroll"><table>
+  <thead><tr><th>Size</th><th class="num">√ law</th><th class="num">Power law</th><th class="num">Learned</th></tr></thead>
+  <tbody>
+  {% for size, m in cal.by_size.items() %}
+  <tr><td><strong>{{ size | int | usd }}</strong></td>{% for k in ('sqrt', 'power', 'learned') %}<td class="num">{{ '%.1f' | format(m[k].mdae_bps) }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+{% if cal.feature_importance %}
+<h3>What predicts a token's Y</h3>
+<p class="measure">In the learned model, the inputs that best explain why one token is costlier to exit than another:
+{% for n, v in cal.feature_importance.items() %}<strong>{{ {'log_sigma': 'volatility', 'turnover': 'turnover (volume ÷ market cap)', 'history_days': 'age', 'log_mcap': 'market cap', 'log_volume': 'volume'}[n] }}</strong> {{ '%.0f' | format(v * 100) }}%{{ ', ' if not loop.last else '.' }}{% endfor %}
+Volatility dominates. Market cap barely matters once you know volume and volatility.</p>
+{% endif %}
+
+<h2 id="grades">Grades</h2>
+<p class="measure">A grade is set by max position at a {{ tol / 100 }}% cost. The first row a token clears is its grade.</p>
+<div class="table-scroll" style="max-width:460px"><table>
+  <thead><tr><th>Grade</th><th class="num">Max position at least</th></tr></thead>
+  <tbody>
+  {% for g, floor in scale %}<tr><td>{{ chip(g) }}</td><td class="num">{{ floor | usd if floor else '$0' }}</td></tr>{% endfor %}
+  <tr><td>{{ chip('NR') }}</td><td class="num t-note">not rated: no volume or no measurable volatility</td></tr>
+  </tbody>
+</table></div>
+<p class="small muted measure" style="margin-top:12px">Tokens above {{ calibrated_max | usd }} are shown as “&gt; {{ calibrated_max | usd }}”. That's the largest sale we measure, and beyond it the curve is extrapolation.</p>
+
+<h2>Limits</h2>
+<ul class="measure">
+  <li><strong>Coverage.</strong> CMC's volume counts every exchange and DEX, but our order books cover four exchanges. For thin tokens this makes the model too optimistic (see false comfort).</li>
+  <li><strong>Immediate sale only.</strong> Spreading a sale over hours or days costs less than these figures.</li>
+  <li><strong>Few days of data.</strong> The fit updates daily as more snapshots accumulate.</li>
+  <li><strong>Not a crash predictor.</strong> <a href="{{ url_for('hindsight') }}">Hindsight</a> shows liquidity looked healthy before LUNA and FTT collapsed.</li>
+  <li><strong>Pegged assets.</strong> Stablecoins with almost no volatility are not rated. Peg risk is a different problem.</li>
+</ul>
+
+<h2>Data &amp; API</h2>
+<p class="measure">CoinMarketCap API: listings, token info, daily and hourly OHLCV, DEX spot pairs. Public order books from Binance, OKX, Coinbase and Kraken. The site never calls an API when a page loads. Everything is computed once a day and served from a database, so it keeps working if a source goes down. <a href="{{ url_for('debug') }}">See the live call log.</a></p>
+<div class="grid cols-2" style="margin-top:16px">
+  <div class="panel pad-sm">
+    <h3 style="margin:0 0 8px;font-size:.92rem">One token</h3>
+    <pre style="margin:0;box-shadow:none"><code>GET /api/v1/impact/&lt;symbol&gt;?size=100000</code></pre>
+  </div>
+  <div class="panel pad-sm">
+    <h3 style="margin:0 0 8px;font-size:.92rem">Every rating</h3>
+    <pre style="margin:0;box-shadow:none"><code>GET /api/v1/ratings</code></pre>
+  </div>
+</div>
+{% endblock %}

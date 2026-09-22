@@ -103,10 +103,72 @@ CREATE TABLE IF NOT EXISTS book_raw (
     PRIMARY KEY (ts, token_id, venue)
 );
 
--- TODO(you): add these as you reach each step.
---   liquidity(token_id, ts, pair_count, hhi, turnover, venue_breadth, score, grade)
---   impact(token_id, ts, Y, max_position_2pct, cost_curve_json, confidence_lo, confidence_hi)
---   api_calls(ts, endpoint, status, latency_ms, credits, cache_hit)  -- powers /debug
+-- One row per token per daily run. Written by ingest/ratings.py; everything the
+-- site shows about a token comes from here. Grade changes between runs = the
+-- downgrade feed.
+CREATE TABLE IF NOT EXISTS ratings (
+    ts              TEXT,
+    token_id        INTEGER,
+    symbol          TEXT,
+    name            TEXT,
+    slug            TEXT,
+    price           REAL,
+    market_cap      REAL,
+    volume_24h      REAL,
+    sigma           REAL,
+    Y               REAL,
+    delta           REAL,
+    max_position    REAL,
+    max_pos_lo      REAL,
+    max_pos_hi      REAL,
+    extrapolated    INTEGER,
+    grade           TEXT,
+    exit_100k_bps   REAL,
+    manip_10pct_usd REAL,
+    PRIMARY KEY (ts, token_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ratings_token ON ratings(token_id, ts);
+
+-- Hindsight (ingest/hindsight.py): raw candles for past collapses, and the
+-- same daily rating the live site uses, run over them.
+CREATE TABLE IF NOT EXISTS hindsight_candles (
+    case_key   TEXT,
+    token_id   INTEGER,
+    day        TEXT,
+    close      REAL,
+    volume     REAL,
+    market_cap REAL,
+    PRIMARY KEY (case_key, day)
+);
+CREATE TABLE IF NOT EXISTS hindsight (
+    case_key      TEXT,
+    day           TEXT,
+    close         REAL,
+    volume        REAL,
+    market_cap    REAL,
+    sigma         REAL,
+    max_position  REAL,
+    grade         TEXT,
+    exit_100k_bps REAL,
+    PRIMARY KEY (case_key, day)
+);
+
+-- The evidence on each token page: cost of an immediate sale into the merged
+-- order books, per size, for the latest day. status: ok | unabsorbable.
+CREATE TABLE IF NOT EXISTS observed_costs (
+    day      TEXT,
+    token_id INTEGER,
+    size_usd REAL,
+    bps      REAL,
+    status   TEXT,
+    venues   INTEGER,
+    PRIMARY KEY (day, token_id, size_usd)
+);
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
 
 -- Why api_calls matters: the hackathon requires "visible evidence of a real API call".
 -- A live log page satisfies that better than a README snippet. Build it on day one

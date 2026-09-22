@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block title %}No ratings yet{% endblock %}
+{% block wrapmod %}reading{% endblock %}
+{% block body %}
+<div class="empty">
+  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v10c0 1.7 4 3 9 3s9-1.3 9-3V7"/><ellipse cx="12" cy="7" rx="9" ry="3"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+  <h1>No ratings yet</h1>
+  <p>The database has no ratings. Run the daily pipeline once — it snapshots order books, calibrates the model and rates every token — then reload this page.</p>
+  <pre style="text-align:left;margin-top:20px"><code>./scripts/daily.sh</code></pre>
+</div>
+{% endblock %}

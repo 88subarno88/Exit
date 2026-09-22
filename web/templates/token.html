@@ -1,0 +1,176 @@
+{% extends "base.html" %}{% from "_macros.html" import chip, maxpos_band, stat %}
+{% block title %}{{ r.symbol }}{% endblock %}
+{% block wrapmod %}mid{% endblock %}
+{% block body %}
+
+<p class="crumb"><a href="{{ url_for('ratings') }}">Ratings</a> <span class="sep">/</span> <span>{{ r.name }}</span></p>
+<h1>{{ r.name }} <span class="muted" style="font-weight:600">{{ r.symbol }}</span></h1>
+
+<div class="grid" style="margin:20px 0 24px">
+  {{ stat('Price', r.price | price, small=True) }}
+  {{ stat('Market cap', r.market_cap | usd, small=True) }}
+  {{ stat('24h volume', r.volume_24h | usd, small=True) }}
+  {{ stat('$100k sale costs', r.exit_100k_bps | bps, small=True) }}
+</div>
+
+<div class="hero">
+  <div class="panel">
+    <span class="label">Max position you can sell at once for under 2%</span>
+    <div class="big" style="margin-top:10px">{{ r | maxpos }}</div>
+    <div class="band">{{ maxpos_band(r) }}</div>
+    <p class="small muted" style="margin:16px 0 0;max-width:52ch">
+      {% if r.extrapolated %}The model puts this far above $10M, the largest sale we have measured on real order books. We don't print an extrapolated figure.
+      {% elif r.max_position %}A sale of {{ r.max_position | usd }} costs about 2% below the screen price if you sell it immediately across Binance, OKX, Coinbase and Kraken. Larger sales cost more, as the curve below shows.{% endif %}
+    </p>
+  </div>
+  <div class="panel" style="text-align:center;display:flex;flex-direction:column;justify-content:center;gap:14px">
+    <span class="label">Exit grade</span>
+    <div>{{ chip(r.grade, big=True) }}</div>
+    <p class="small muted" style="margin:0">Set by max position.<br><a href="{{ url_for('methodology') }}#grades">See the scale</a></p>
+  </div>
+</div>
+
+<h2>What leaving costs</h2>
+<div class="table-scroll"><table>
+  <thead><tr><th>Sell at once</th><th class="num">Estimated cost</th><th class="num">In dollars</th><th class="num">50% band</th><th>Note</th></tr></thead>
+  <tbody>
+  {% for size, e, eb in exits %}
+  <tr><td><strong>{{ size | usd }}</strong></td>
+      {% if e %}
+      <td class="num">{{ e.bps | bps }}</td><td class="num">{{ e.cost_usd | usd }}</td>
+      <td class="num muted">{% if eb %}{{ eb[0] | bps }} – {{ eb[1] | bps }}{% endif %}</td>
+      <td class="t-note">{% if e.beyond_model %}more than a day's volume: extrapolated{% elif size > calibrated_max %}above our largest measured sale{% else %}—{% endif %}</td>
+      {% else %}<td colspan="4" class="muted">can't be estimated: no volume or volatility</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+<h2>The evidence</h2>
+<div class="panel">
+  <div class="chart"><canvas id="curve" aria-label="Model cost curve with measured order-book costs"></canvas></div>
+  <p class="chart-note">
+    Line: the model's estimated cost, with its 50% band shaded. The line is dashed beyond one day's volume, where it's extrapolated.
+    {% if observed %}Diamonds: what an immediate sale actually cost today when we walked the merged order books of {{ observed[0].venues }} exchange{{ 's' if observed[0].venues != 1 }}.
+    {% else %}No exchange we snapshot lists this token, so there's no measurement to compare against. The number above is the model alone.{% endif %}
+  </p>
+  {% set gone = observed | selectattr('status', 'equalto', 'unabsorbable') | list %}
+  {% if gone %}
+  <p class="notice" style="margin:16px 0 0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    <span><strong>The books could not absorb a {{ gone[0].size_usd | usd }} sale at all.</strong> Every bid within 50% of the price wasn't enough.
+      {% set est = (exits | selectattr(0, 'equalto', gone[0].size_usd | int) | first) %}
+      {% if est and est[1] and est[1].bps < 1000 %}The model puts that sale at {{ est[1].bps | bps }}, so for this token it's too optimistic at that size. Other exchanges or DEXs may absorb it, but the four books we can see can't.{% endif %}
+    </span>
+  </p>
+  {% endif %}
+</div>
+
+<h2>Order books measured</h2>
+{% if venues %}
+<div class="table-scroll"><table>
+  <thead><tr><th>Exchange</th><th>Market</th><th class="num">Spread</th><th class="num">Bids within 2%</th><th class="num">$100k sale cost</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for v in venues %}
+  <tr><td><strong>{{ v.venue | capitalize }}</strong></td><td class="muted">{{ v.pair }}</td><td class="num">{{ v.spread_bps | bps }}</td>
+      <td class="num">{{ v.depth_2pct_usd | usd }}</td><td class="num">{{ v.impact_mid_bps | bps }}</td>
+      <td class="t-note">{{ {'ok': 'filled', 'thin': 'book too thin', 'truncated': 'exchange capped the book', 'price_mismatch': 'different token, same ticker'}[v.status] }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="callout">None of the four exchanges we snapshot (Binance, OKX, Coinbase, Kraken) lists {{ r.symbol }} against USD or USDT. It may trade on other exchanges or on DEXs.</div>
+{% endif %}
+
+<h2>What if liquidity dries up</h2>
+<div class="panel whatif">
+  <p class="small muted" style="margin:0;max-width:70ch">Liquidity falls in a sell-off. Move the sliders to see how the max position and grade change — it's the same curve, with different inputs.</p>
+  <div class="sliders">
+    <div>
+      <label for="vol">24h volume <output id="volv" for="vol">today's</output></label>
+      <input type="range" id="vol" min="-95" max="100" value="0" step="5">
+    </div>
+    <div>
+      <label for="sig">Daily volatility <output id="sigv" for="sig">today's</output></label>
+      <input type="range" id="sig" min="50" max="400" value="100" step="10">
+    </div>
+  </div>
+  <div class="result">
+    <span><span class="k">Max position</span><span class="v" id="wmp">{{ r | maxpos }}</span></span>
+    <span><span class="k">Grade</span><span class="v" id="wgr">{{ chip(r.grade) }}</span></span>
+    <button type="button" class="btn ghost" id="wreset" style="margin-left:auto">Reset</button>
+  </div>
+</div>
+
+{% if history | length > 1 %}
+<h2>Grade history</h2>
+<p class="small" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+  {% for h in history %}<span style="display:inline-flex;align-items:center;gap:6px"><span class="muted">{{ h.ts[:10] }}</span> {{ chip(h.grade) }}</span>{% if not loop.last %}<span class="faint">→</span>{% endif %}{% endfor %}
+</p>
+{% endif %}
+
+<p class="caveat">Inputs: yesterday's CMC volume {{ r.volume_24h | usd }}, 30-day daily volatility {{ '%.1f' | format(r.sigma * 100) if r.sigma else '—' }}%, and the calibrated curve (Y = {{ '%.2f' | format(r.Y) }}, δ = {{ '%.3f' | format(r.delta) }}). CMC's volume counts every exchange and DEX, but our order books cover four exchanges, so for thin tokens the model tends to be too optimistic. <a href="{{ url_for('methodology') }}">Methodology and error table</a> · <a href="{{ url_for('api_impact', symbol=r.symbol, id=r.token_id, size=100000) }}">this token as JSON</a></p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+EXIT.chart(function () {
+  const curve = {{ curve | tojson }}, band = {{ band | tojson }}, obs = {{ observed | map('list') | list | tojson }};
+  const canvas = document.getElementById("curve");
+  if (!canvas) return;
+  const model = EXIT.css("--model"), ink = EXIT.css("--observed"), faint = EXIT.css("--faint");
+
+  return new Chart(canvas, {
+    type: "line",
+    data: { datasets: [
+      { label: "band high", data: band.map(b => ({x: b[0], y: b[2]})), borderWidth: 0, pointRadius: 0, fill: "+1", backgroundColor: model + "1f" },
+      { label: "band low", data: band.map(b => ({x: b[0], y: b[1]})), borderWidth: 0, pointRadius: 0, fill: false },
+      { label: "Model estimate", data: curve.map(c => ({x: c[0], y: c[1]})), borderColor: model, borderWidth: 2.5,
+        pointRadius: 0, tension: .15, pointStyle: "line",
+        segment: { borderDash: ctx => curve[ctx.p1DataIndex][2] ? [6, 5] : undefined } },
+      { label: "Measured today", type: "scatter", data: obs.filter(o => o[2] === "ok").map(o => ({x: o[0], y: Math.max(o[1], 0.1)})),
+        backgroundColor: ink, borderColor: ink, pointRadius: 5.5, pointHoverRadius: 8, pointStyle: "rectRot" },
+    ]},
+    options: {
+      parsing: false,
+      layout: { padding: { top: 6, right: 8 } },
+      scales: {
+        x: { type: "logarithmic", title: { display: true, text: "Sale size", color: faint },
+             ticks: { callback: v => [1e3,1e4,1e5,1e6,1e7,1e8,1e9,1e10].includes(v) ? EXIT.usd(v) : "" } },
+        y: { type: "logarithmic", title: { display: true, text: "Cost vs mid price", color: faint },
+             ticks: { callback: v => [0.1,1,10,100,1000,10000].includes(v) ? EXIT.pct(v) : "" } },
+      },
+      plugins: {
+        legend: { labels: { filter: i => !i.text.startsWith("band") } },
+        tooltip: { filter: i => !i.dataset.label.startsWith("band"),
+                   callbacks: { title: c => "Selling " + EXIT.usd(c[0].raw.x),
+                                label: c => c.dataset.label + ": " + EXIT.pct(c.raw.y) } },
+      },
+    },
+  });
+});
+
+// what-if: the same curve as impact.max_position, with shifted inputs
+document.addEventListener("DOMContentLoaded", function () {
+  const V = {{ r.volume_24h | tojson }}, S = {{ r.sigma | tojson }}, Y = {{ r.Y | tojson }}, D = {{ r.delta | tojson }};
+  const TOL = {{ tol }}, CAP = {{ calibrated_max }}, SCALE = {{ scale | tojson }};   // from impact.py
+  const vol = document.getElementById("vol"), sig = document.getElementById("sig");
+  if (!vol || !sig) return;
+
+  const update = () => {
+    const v = V * (1 + vol.value / 100), s = S * sig.value / 100;
+    document.getElementById("volv").textContent = vol.value == 0 ? "today's" : (vol.value > 0 ? "+" : "") + vol.value + "%";
+    document.getElementById("sigv").textContent = sig.value == 100 ? "today's" : "×" + (sig.value / 100).toFixed(1);
+    const mp = (V && S) ? v * Math.pow(TOL / (10000 * Y * s), 1 / D) : null;
+    const g = mp === null ? "NR" : SCALE.find(([_, f]) => mp >= f)[0];
+    document.getElementById("wmp").textContent = mp === null ? "not rated" : mp > CAP ? "> $10M" : EXIT.usd(mp);
+    document.getElementById("wgr").innerHTML = '<span class="chip g-' + g + '">' + g + '</span>';
+  };
+  vol.addEventListener("input", update);
+  sig.addEventListener("input", update);
+  document.getElementById("wreset").addEventListener("click", () => {
+    vol.value = 0; sig.value = 100; update();
+  });
+});
+</script>
+{% endblock %}

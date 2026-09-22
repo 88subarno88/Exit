@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% from "_macros.html" import chip, token_link %}
+{% block title %}Search: {{ term }}{% endblock %}
+{% block wrapmod %}mid{% endblock %}
+{% block body %}
+<p class="crumb"><a href="{{ url_for('ratings') }}">Ratings</a> <span class="sep">/</span> <span>Search</span></p>
+<h1>“{{ term }}”</h1>
+{% if hits %}
+<p class="lede">{{ hits | length }} match{{ 'es' if hits | length != 1 }}. Symbols aren't unique, so pick the one you mean.</p>
+<div class="table-scroll"><table>
+  <thead><tr><th>Token</th><th>Grade</th><th class="num">Market cap</th></tr></thead>
+  <tbody>
+  {% for h in hits %}<tr><td>{{ token_link(h) }}</td><td>{{ chip(h.grade) }}</td><td class="num">{{ h.market_cap | usd }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty">
+  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <h1>No token matches “{{ term }}”</h1>
+  <p>Exit rates the 500 largest tokens on CoinMarketCap. Try the symbol (BTC) or the full name (Bitcoin).</p>
+  <div class="actions">
+    <a class="btn primary" href="{{ url_for('ratings') }}">Browse all ratings</a>
+    <a class="btn" href="{{ url_for('map_view') }}">Back to the map</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
