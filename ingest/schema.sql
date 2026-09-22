@@ -36,6 +36,32 @@ CREATE TABLE IF NOT EXISTS pairs (
 );
 CREATE INDEX IF NOT EXISTS idx_pairs_token_ts ON pairs(token_id, ts);
 
+-- Candles from /v2/cryptocurrency/ohlcv/historical. interval: 'd' | 'h'.
+-- Filled by scripts/backfill_ohlcv.py. Hourly only reaches back one month on the
+-- hackathon plan, so this table is the only place older hourly data will exist.
+CREATE TABLE IF NOT EXISTS ohlcv (
+    token_id   INTEGER,
+    interval   TEXT,
+    time_open  TEXT,
+    time_close TEXT,
+    open       REAL,
+    high       REAL,
+    low        REAL,
+    close      REAL,
+    volume     REAL,
+    market_cap REAL,
+    PRIMARY KEY (token_id, interval, time_open)
+);
+
+CREATE TABLE IF NOT EXISTS api_calls (
+    ts         TEXT,
+    endpoint   TEXT,
+    status     INTEGER,
+    latency_ms INTEGER,
+    credits    INTEGER,
+    cache_hit  INTEGER
+);
+
 -- TODO(you): add these as you reach each step.
 --   liquidity(token_id, ts, pair_count, hhi, turnover, venue_breadth, score, grade)
 --   books(symbol, venue, ts, size_usd, true_slippage_bps)   -- ground truth, step 4
