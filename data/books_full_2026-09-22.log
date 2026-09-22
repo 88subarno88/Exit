@@ -1,0 +1,50 @@
+Skipping symbols shared by 2+ CMC tokens: GUSD, ONE
+  binance    250 of 496 tokens listed  (~11 min)
+  okx        209 of 496 tokens listed  (~2 min)
+  coinbase   203 of 496 tokens listed  (~1 min)
+  kraken     292 of 496 tokens listed  (~5 min)
+  kraken    MUSD         price_mismatch mid=1.15424 cmc=1.30257
+  coinbase  ZRO-USD      price_mismatch mid=1.3736 cmc=1.23068
+  coinbase  AI-USD       price_mismatch mid=0.021075 cmc=0.228101
+  coinbase  EDGE-USD     price_mismatch mid=0.08156 cmc=0.601366
+  kraken    UUSD         price_mismatch mid=0.0002555 cmc=0.999736
+  kraken    LITUSD       price_mismatch mid=0.15415 cmc=4.67555
+  okx       ZRO-USDT     price_mismatch mid=1.37835 cmc=1.23068
+  coinbase  VELO-USD     price_mismatch mid=0.029515 cmc=0.00480903
+  okx       AI-USDT      price_mismatch mid=0.02107 cmc=0.228101
+  kraken    ZROUSD       price_mismatch mid=1.3755 cmc=1.23068
+  coinbase  UP-USD       price_mismatch mid=0.06254 cmc=0.290945
+  coinbase  AURORA-USD   price_mismatch mid=0.094011 cmc=0.127772
+  coinbase  INDEX-USD    price_mismatch mid=0.2741 cmc=0.036265
+  coinbase  IOTX-USD     price_mismatch mid=0.003275 cmc=0.00377517
+  coinbase  done: 195 books
+  kraken    AIUSD        price_mismatch mid=0.021075 cmc=0.228101
+  kraken    EDGEUSD      price_mismatch mid=0.0815 cmc=0.601366
+  binance   ZROUSDT      price_mismatch mid=1.3815 cmc=1.23068
+  okx       ELF-USDT     price_mismatch mid=0.07437 cmc=0.0633439
+  okx       done: 206 books
+  kraken    FUNUSD       price_mismatch mid=0.01945 cmc=0.00722634
+  binance   AIUSDT       price_mismatch mid=0.0184 cmc=0.228101
+  binance   FRAXUSDT     price_mismatch mid=0.2907 cmc=0.992768
+  kraken    UPUSD        price_mismatch mid=0.0624 cmc=0.290945
+  kraken    MUBARAKUSD   price_mismatch mid=0.082555 cmc=0.0650846
+  kraken    LUNAUSD      price_mismatch mid=5.499e-05 cmc=0.0532403
+  kraken    done: 281 books
+  binance   MUBARAKUSDT  price_mismatch mid=0.081625 cmc=0.0650846
+  binance   done: 246 books
+
+=== Snapshot 2026-09-22T16:52:00+00:00 ===
+venue       books      ok  thin  trunc  mismatch
+binance       250    1757   620     83         4
+coinbase      203    1318   632      0         8
+kraken        291    1730   821    259        10
+okx           209    1446   529     85         3
+
+Median SELL slippage (bps vs best bid) by size, status=ok:
+  $       1,000  n=928   median=3.2
+  $      10,000  n=907   median=20.7
+  $     100,000  n=570   median=65.6
+  $   1,000,000  n=154   median=206.9
+  $  10,000,000  n=26    median=137.1
+
+361 tokens with at least one usable book.

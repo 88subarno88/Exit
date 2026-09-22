@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS books (
 );
 CREATE INDEX IF NOT EXISTS idx_books_token ON books(token_id, ts);
 
--- Raw levels within 10% of mid, zlib-compressed JSON {"bids": [[p, q]...], "asks": [...]}.
+-- Raw levels within RAW_BAND (50%) of mid, zlib-compressed JSON {"bids": [[p, q]...], "asks": [...]}.
 -- If walk_book ever turns out to be wrong, recompute from here instead of losing days.
 CREATE TABLE IF NOT EXISTS book_raw (
     ts          TEXT,

@@ -33,7 +33,8 @@ from .config import DB_PATH
 
 SIZES = (1_000, 10_000, 100_000, 1_000_000, 10_000_000)
 PRICE_TOL = 0.10        # venue mid vs CMC's last hourly close; wider = wrong token
-RAW_BAND = 0.10         # keep raw levels within 10% of mid, so walks can be recomputed
+RAW_BAND = 0.50         # keep raw levels within 50% of mid, so walks can be recomputed.
+                        # Was 0.10 until 2026-09-22: that silently hid fills costing >10%.
 UA = {"User-Agent": "exit-research/0.1"}
 
 

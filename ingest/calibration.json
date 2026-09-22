@@ -1,0 +1,42 @@
+{
+ "model": "power",
+ "delta": 0.6459108136801057,
+ "Y": 4.441748689540573,
+ "target": "immediate sale across binance/okx/coinbase/kraken vs consolidated mid",
+ "fitted_on": {
+  "rows": 619,
+  "censored": 619,
+  "tokens": 340,
+  "days": [
+   "2026-09-22"
+  ]
+ },
+ "cv": {
+  "sqrt": {
+   "mdae_bps": 9.345288144640898,
+   "median_factor": 1.663744906922846,
+   "r2_log": 0.48289501375094646,
+   "false_comfort": 0.8481421647819063
+  },
+  "power": {
+   "mdae_bps": 9.331058658315342,
+   "median_factor": 1.612396057690443,
+   "r2_log": 0.48407991893332747,
+   "false_comfort": 0.617124394184168
+  },
+  "learned": {
+   "mdae_bps": 8.932723783777838,
+   "median_factor": 1.5384567125119255,
+   "r2_log": 0.636661422000846,
+   "false_comfort": 0.6252019386106623
+  }
+ },
+ "features": [
+  "log_sigma",
+  "log_volume",
+  "log_mcap",
+  "turnover",
+  "history_days"
+ ],
+ "date": "2026-09-22"
+}
