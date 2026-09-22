@@ -1,0 +1,115 @@
+
+=== 1. Universe: same 10 tokens as the market-pairs check ===
+  BTC     id=1      mcap=$1,733,741,017,357 vol=$ 45,441,311,386  native only
+  ETH     id=1027   mcap=$  336,597,675,720 vol=$ 18,620,725,988  20 contracts
+  XRP     id=52     mcap=$   99,626,465,453 vol=$  6,849,306,410  4 contracts
+  HYPE    id=32196  mcap=$   23,986,986,738 vol=$  1,240,004,073  1 contracts
+  USD1    id=36148  mcap=$    4,351,835,336 vol=$  1,415,792,581  4 contracts
+  SKY     id=33038  mcap=$    1,596,554,009 vol=$     24,686,588  1 contracts
+  AERO    id=29270  mcap=$      689,574,224 vol=$     62,665,063  1 contracts
+  BSV     id=3602   mcap=$      410,483,030 vol=$     28,666,665  native only
+  TRAC    id=2467   mcap=$      175,369,730 vol=$      5,316,043  3 contracts
+  ORCA    id=11165  mcap=$       90,844,554 vol=$     12,276,336  1 contracts
+
+=== 2. Scan 14 DEX venues (top 200 by volume + top 200 by liquidity) ===
+  eth/uniswap-v3       pages=4   pools_seen=309   matched=180
+  eth/uniswap-v2       pages=4   pools_seen=323   matched=280
+  eth/uniswap-v4       pages=4   pools_seen=301   matched=125
+  eth/sushiswap        pages=4   pools_seen=283   matched=227
+  arb/uniswap-v3       pages=4   pools_seen=297   matched=134
+  arb/camelot-v3       pages=4   pools_seen=266   matched=132
+  base/aerodrome-cl    pages=4   pools_seen=245   matched=149
+  bsc/pancakeswap-v2   pages=4   pools_seen=372   matched=2
+  sol/raydium          pages=4   pools_seen=307   matched=1
+  sol/raydium-clmm     pages=4   pools_seen=320   matched=7
+  sol/orca             pages=4   pools_seen=319   matched=15
+  sol/pumpswap         pages=4   pools_seen=379   matched=0
+  hyperevm/hyperswap   pages=4   pools_seen=303   matched=243
+  hyperevm/project-x   pages=4   pools_seen=273   matched=122
+
+=== 3. Per-token detail (top 5 USABLE pools by liquidity) ===
+
+-- BTC  CMC price $86,307.6  (29 of 127 pools rejected: dead, off-price or spoof)
+   eth/uniswap-v3         WBTC/WETH     liq=$    48,072,156 vol=$   48,907,796 px_dev= -0.30%
+   eth/uniswap-v3         WBTC/WETH     liq=$    47,558,220 vol=$    1,062,266 px_dev= -0.62%
+   eth/uniswap-v3         WBTC/kBTC     liq=$    39,736,982 vol=$    5,616,897 px_dev= -0.40%
+   arb/uniswap-v3         WBTC/WETH     liq=$    39,572,716 vol=$   37,859,632 px_dev= -0.34%
+   eth/uniswap-v3         WBTC/USDT     liq=$    30,477,670 vol=$   47,600,607 px_dev= -0.02%
+
+-- ETH  CMC price $2,757.4  (494 of 1093 pools rejected: dead, off-price or spoof)
+   eth/uniswap-v2         WETH/WISE     liq=$   155,578,551 vol=$        6,821 px_dev= -0.46%
+   eth/uniswap-v3         WETH/USDC     liq=$   100,548,622 vol=$   78,444,857 px_dev= -0.21%
+   eth/uniswap-v3         WETH/USDT     liq=$   100,427,218 vol=$   46,694,560 px_dev= -0.24%
+   eth/uniswap-v3         WETH/WBTC     liq=$    48,072,156 vol=$   48,907,796 px_dev= -0.21%
+   eth/uniswap-v3         WETH/WBTC     liq=$    47,558,220 vol=$    1,062,266 px_dev= -0.17%
+
+-- XRP  CMC price $1.58441  (0 of 2 pools rejected: dead, off-price or spoof)
+   sol/raydium-clmm        XRP/USDC     liq=$       572,579 vol=$    2,237,734 px_dev= -0.21%
+   sol/raydium-clmm        XRP/wSOL     liq=$        13,229 vol=$      297,515 px_dev= -0.22%
+
+-- HYPE  CMC price $95.4264  (301 of 365 pools rejected: dead, off-price or spoof)
+   hyperevm/project-x    WHYPE/USDC     liq=$    14,786,176 vol=$   63,386,113 px_dev= +0.21%
+   hyperevm/project-x    WHYPE/UBTC     liq=$     7,269,404 vol=$    2,561,307 px_dev= -0.03%
+   hyperevm/project-x    WHYPE/USDC     liq=$     5,764,604 vol=$    4,868,098 px_dev= +0.17%
+   hyperevm/hyperswap    WHYPE/UBTC     liq=$     2,379,202 vol=$    1,387,424 px_dev= +0.01%
+   hyperevm/project-x    WHYPE/kHYPE    liq=$     2,323,985 vol=$    3,283,132 px_dev= +0.17%
+
+-- USD1  CMC price $0.999397  (2 of 9 pools rejected: dead, off-price or spoof)
+   bsc/pancakeswap-v2     USD1/AGX      liq=$    28,474,365 vol=$    1,307,509 px_dev= +0.00%
+   sol/raydium-clmm       USD1/USDC     liq=$     9,898,328 vol=$    3,162,626 px_dev= -0.02%
+   sol/raydium-clmm       USD1/wSOL     liq=$     5,015,062 vol=$    1,845,017 px_dev= +0.00%
+   eth/uniswap-v4         USD1/DOLO     liq=$       921,207 vol=$       73,534 px_dev= +0.00%
+   eth/uniswap-v2         USD1/B        liq=$       334,017 vol=$       19,927 px_dev= -0.02%
+
+-- SKY  CMC price $0.0681546  (0 of 8 pools rejected: dead, off-price or spoof)
+   eth/uniswap-v2          SKY/USDS     liq=$     8,963,736 vol=$      667,909 px_dev= +0.12%
+   eth/uniswap-v4          SKY/WBTC     liq=$     7,798,804 vol=$      146,826 px_dev= +0.66%
+   eth/uniswap-v4          SKY/USDC     liq=$     2,644,520 vol=$      748,950 px_dev= +0.18%
+   eth/uniswap-v3          SKY/WETH     liq=$     1,356,478 vol=$      218,333 px_dev= -0.59%
+   eth/uniswap-v4          SKY/ETH      liq=$       508,733 vol=$       55,550 px_dev= -0.49%
+
+-- AERO  CMC price $0.694684  (1 of 8 pools rejected: dead, off-price or spoof)
+   base/aerodrome-cl      AERO/USDC     liq=$     2,807,881 vol=$      509,968 px_dev= -1.56%
+   base/aerodrome-cl      AERO/cbBTC    liq=$     1,743,575 vol=$    8,140,244 px_dev= +0.05%
+   base/aerodrome-cl      AERO/WETH     liq=$     1,217,621 vol=$    1,300,326 px_dev= +0.13%
+   base/aerodrome-cl      AERO/USDC     liq=$       721,219 vol=$    1,151,401 px_dev= +0.11%
+   base/aerodrome-cl      AERO/wstETH   liq=$       302,828 vol=$       43,795 px_dev= -1.35%
+
+-- BSV  CMC price $20.4351  (0 of 0 pools rejected: dead, off-price or spoof)
+   no usable pools on scanned venues
+
+-- TRAC  CMC price $0.350739  (0 of 2 pools rejected: dead, off-price or spoof)
+   eth/uniswap-v3         TRAC/WETH     liq=$       436,815 vol=$      144,780 px_dev= +2.56%
+   eth/uniswap-v4         TRAC/ETH      liq=$       144,393 vol=$       95,770 px_dev= +2.60%
+
+-- ORCA  CMC price $1.49418  (0 of 3 pools rejected: dead, off-price or spoof)
+   sol/orca               ORCA/wSOL     liq=$       632,910 vol=$      725,434 px_dev= -0.28%
+   sol/orca               ORCA/xORCA    liq=$       423,883 vol=$       95,949 px_dev= -0.24%
+   sol/orca               ORCA/USDC     liq=$       111,260 vol=$       26,878 px_dev= +0.22%
+
+======================================================================================
+VERDICT
+======================================================================================
+symbol    pools  usable         pool TVL*  DEX/CMC vol  liq HHI  venues  note
+BTC         127      98       567,501,000        0.7%     0.04       9  wrapped only
+ETH        1093     599     1,362,173,678        4.5%     0.03      10  
+XRP           2       2           585,808        0.0%     0.96       1  
+HYPE        365      64        41,387,479        6.7%     0.19       2  wrapped only
+USD1          9       7        44,953,075        0.5%     0.46       5  
+SKY           8       8        21,803,399        8.3%     0.32       3  
+AERO          8       7         6,927,139       18.0%     0.27       1  
+BSV           0       0                 0        0.0%        -       0  
+TRAC          2       2           581,208        4.5%     0.63       2  
+ORCA          3       3         1,168,053        6.9%     0.43       1  
+* total TVL of pools containing the token (both sides) -- an upper bound, not depth.
+
+9/10 tokens have >=1 usable pool (liq>0, vol>=$1,000, price within 5% of CMC); 6 have usable pools on 2+ venues.
+Credits used this run: 58
+
+  >=7  -> GO. DEX pools are the per-venue layer; CEX order books (step 4) fill the rest.
+  4-6  -> GO, but CEX order books carry the model; DEX is a coverage bonus. Say so.
+  <4   -> STOP. Per-venue data isn't there on this plan; rethink the project.
+Tokens with no pools are usually native L1s with no wrapped form -- expected, and
+exactly what the public order books in step 4 are for.
+
+Raw matched pools saved to data/day1_dex_pools_2026-09-22.json

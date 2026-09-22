@@ -1,0 +1,10 @@
+requests
+python-dotenv
+flask
+apscheduler
+# calibration / ML (step 6)
+numpy
+pandas
+scikit-learn
+# tests
+pytest
