@@ -20,4 +20,6 @@ TTL = {
     "quotes":        900,
     "info":        86400,
     "map":        604800,   # ids never change — cache this almost forever
+    "ohlcv":       86400,   # daily candles only change once a day
+    "dex":          3600,
 }

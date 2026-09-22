@@ -11,6 +11,7 @@ Three things this client must do beyond fetching:
 """
 
 import time
+from datetime import datetime, timezone
 import requests
 from .config import HEADERS, BASE_URL, TTL
 from . import cache
@@ -20,7 +21,31 @@ def _get(path: str, params: dict, ttl: int):
     """Every request goes through here. Nothing calls requests directly."""
     # Sorting params ensures the cache key is stable regardless of dict insertion order
     key = f"{path}:{sorted(params.items())}"
-    return cache.cached(key, ttl, lambda: _raw(path, params))
+    fetched = []
+    result = cache.cached(key, ttl, lambda: fetched.append(1) or _raw(path, params))
+    if not fetched:
+        _log(path, 200, 0, 0, cache_hit=1)   # served from cache: 0 credits, still visible on /debug
+    return result
+
+
+def _log(path, status, latency_ms, credits, cache_hit=0):
+    """One row in api_calls. Columns must match ingest/schema.sql -- scripts write here too."""
+    try:
+        conn = cache._conn()
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_calls (
+                ts TEXT, endpoint TEXT, status INTEGER,
+                latency_ms INTEGER, credits INTEGER, cache_hit INTEGER
+            )
+        """)
+        conn.execute(
+            "INSERT INTO api_calls (ts, endpoint, status, latency_ms, credits, cache_hit) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (datetime.now(timezone.utc).isoformat(), path, status, latency_ms, credits, cache_hit)
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to log API call: {e}")
 
 
 def _raw(path: str, params: dict):
@@ -41,25 +66,8 @@ def _raw(path: str, params: dict):
         status = resp_json.get("status", {})
         credits_used = status.get("credit_count", 0)
         
-        # 1. Log every call to api_calls (creates table safely if missing)
-        try:
-            conn = cache._conn()
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS api_calls (
-                    path TEXT, 
-                    status_code INTEGER, 
-                    elapsed_ms INTEGER, 
-                    credits INTEGER, 
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            conn.execute(
-                "INSERT INTO api_calls (path, status_code, elapsed_ms, credits) VALUES (?, ?, ?, ?)",
-                (path, r.status_code, elapsed_ms, credits_used)
-            )
-            conn.commit()
-        except Exception as e:
-            print(f"Warning: Failed to log API call: {e}")
+        # 1. Log every call to api_calls
+        _log(path, r.status_code, elapsed_ms, credits_used)
 
         # 2. Handle 429 Rate Limiting with exponential backoff
         if r.status_code == 429 and attempt < max_retries - 1:
@@ -78,7 +86,7 @@ def _raw(path: str, params: dict):
 def listings(limit=500, sort="volume_24h"):
     """/v1/cryptocurrency/listings/latest — your universe.
     NOTE: limit=5000 is not one credit. Check the credit rules before you widen it."""
-    return _get("/v1/cryptocurrency/listings/latest", {"limit": limit, "sort": sort}, TTL)
+    return _get("/v1/cryptocurrency/listings/latest", {"limit": limit, "sort": sort}, TTL["listings"])
 
 
 def market_pairs(token_id: int, limit=100):
@@ -90,12 +98,12 @@ def market_pairs(token_id: int, limit=100):
 
     These become rows in `pairs`, and `pairs` is what the impact model is built on.
     If this returns thin data, run scripts/day1_validate.py and rethink."""
-    return _get("/v1/cryptocurrency/market-pairs/latest", {"id": token_id, "limit": limit}, TTL)
+    return _get("/v1/cryptocurrency/market-pairs/latest", {"id": token_id, "limit": limit}, TTL["market_pairs"])
 
 
 def quotes(ids: list[int]):
     """/v2/cryptocurrency/quotes/latest — BATCH these. ids=1,2,3 in one call."""
-    return _get("/v2/cryptocurrency/quotes/latest", {"id": ",".join(map(str, ids))}, TTL)
+    return _get("/v2/cryptocurrency/quotes/latest", {"id": ",".join(map(str, ids))}, TTL["quotes"])
 
 
 def ohlcv_historical(token_id: int, days=90):
@@ -105,10 +113,10 @@ def ohlcv_historical(token_id: int, days=90):
         "id": token_id,
         "time_period": "daily", 
         "count": days
-    }, TTL)
+    }, TTL["ohlcv"])
 
 
 def dex_spot_pairs(**kw):
     """/v4/dex/spot-pairs/latest — on-chain pools. Under-used by everyone else,
     which is exactly why it scores on 'interesting use of the API'."""
-    return _get("/v4/dex/spot-pairs/latest", kw, TTL)
+    return _get("/v4/dex/spot-pairs/latest", kw, TTL["dex"])

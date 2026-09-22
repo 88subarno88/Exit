@@ -62,9 +62,49 @@ CREATE TABLE IF NOT EXISTS api_calls (
     cache_hit  INTEGER
 );
 
+-- Ground truth from public order books (step 4). One row per
+-- (snapshot, token, venue, side, size). Written by ingest/books.py.
+--   slippage_bps   : avg fill vs BEST price  -- what the model is graded on
+--   impact_mid_bps : avg fill vs MID         -- includes half the spread
+--   status         : ok | thin (whole book seen, too small) |
+--                    truncated (venue capped the levels -- unknown, NOT thin) |
+--                    price_mismatch (same ticker, different token; not walked)
+CREATE TABLE IF NOT EXISTS books (
+    ts             TEXT,
+    token_id       INTEGER,
+    symbol         TEXT,
+    venue          TEXT,
+    pair           TEXT,
+    quote          TEXT,
+    side           TEXT,
+    size_usd       REAL,
+    slippage_bps   REAL,
+    impact_mid_bps REAL,
+    status         TEXT,
+    mid            REAL,
+    spread_bps     REAL,
+    depth_2pct_usd REAL,
+    levels         INTEGER,
+    truncated      INTEGER,
+    PRIMARY KEY (ts, token_id, venue, side, size_usd)
+);
+CREATE INDEX IF NOT EXISTS idx_books_token ON books(token_id, ts);
+
+-- Raw levels within 10% of mid, zlib-compressed JSON {"bids": [[p, q]...], "asks": [...]}.
+-- If walk_book ever turns out to be wrong, recompute from here instead of losing days.
+CREATE TABLE IF NOT EXISTS book_raw (
+    ts          TEXT,
+    token_id    INTEGER,
+    venue       TEXT,
+    pair        TEXT,
+    mid         REAL,
+    truncated   INTEGER,
+    levels_zlib BLOB,
+    PRIMARY KEY (ts, token_id, venue)
+);
+
 -- TODO(you): add these as you reach each step.
 --   liquidity(token_id, ts, pair_count, hhi, turnover, venue_breadth, score, grade)
---   books(symbol, venue, ts, size_usd, true_slippage_bps)   -- ground truth, step 4
 --   impact(token_id, ts, Y, max_position_2pct, cost_curve_json, confidence_lo, confidence_hi)
 --   api_calls(ts, endpoint, status, latency_ms, credits, cache_hit)  -- powers /debug
 
